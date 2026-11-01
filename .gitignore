@@ -1,0 +1,34 @@
+# Dependencies
+/node_modules/
+/.yarn-integrity
+
+# Next.js build output
+/.next/
+/out/
+/build/
+
+# Environment variables (never commit local secrets)
+.env*
+!.env.example
+
+# Logs and process files
+*.log
+*.pid
+/pids/
+
+# TypeScript incremental cache
+*.tsbuildinfo
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Local project-management metadata and logs
+.project-config.json
+.manus-logs/
+.webdev/
