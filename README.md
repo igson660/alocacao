@@ -105,3 +105,7 @@ Uma entrada que não representa formação comparável ou que não é reconhecid
 ## Publicação
 
 As instruções de implantação no Vercel e em hospedagem Node.js estão em [`PUBLICACAO.md`](./PUBLICACAO.md).
+
+## Aplicativo desktop Windows
+
+O repositório também contém o protótipo desktop portátil em [`desktop-windows/`](./desktop-windows/). Para gerar o ZIP com executável, selecione a branch `windows-portable-app` e execute **Actions → Build PMAC Windows portable app → Run workflow**. O artefato `PMAC-Analise-Formacao-Windows-x64` fica disponível na execução por 30 dias. O build de CI executa o smoke test somente com uma base sintética; não usa nem publica bases individuais.

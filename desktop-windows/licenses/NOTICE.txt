@@ -1,0 +1,8 @@
+PMAC — Análise de Formação e Unidade
+
+O pacote inclui o modelo sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2, uma obra de terceiros disponibilizada sob a Apache License 2.0, conforme declarado no cartão do modelo. A cópia da licença está em Apache-2.0.txt.
+
+Modelo: https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Revisão incluída: e8f8c211226b894fcb81acc59f3b34ba3efd5f42
+
+Este aplicativo utiliza o checkpoint como dependência, sem reivindicar autoria do modelo. Os arquivos de licença e atribuição dos demais componentes incluídos devem ser preservados conforme os avisos de cada dependência.

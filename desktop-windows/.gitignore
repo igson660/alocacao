@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Pesos distribuídos pelo workflow e resultados de usuários
+models/*
+dist/
+build/
+release/
+*.spec.bak
+*.log
+.pmac_run_events.jsonl
+.pmac_cancel_request
+resultado_analise_pmac_*.csv
+auditoria_classificacao_unidades.csv
+graficos/
+test_run/
+test_events.jsonl
+parity_run/
