@@ -58,12 +58,12 @@ jobs:
       - name: Smoke test do executável (base sintética)
         run: |
           $exe = "dist/PMAC-Analise-Formacao/PMAC-Analise-Formacao.exe"
-          $input = "tests/fixtures/mini_pmac.csv"
+          $inputFile = "tests/fixtures/mini_pmac.csv"
           $out = Join-Path $env:RUNNER_TEMP "pmac-smoke-out"
           $events = Join-Path $env:RUNNER_TEMP "pmac-smoke-events.jsonl"
           if (!(Test-Path $exe)) { throw "Executável não encontrado: $exe" }
           if (!(Test-Path "dist/PMAC-Analise-Formacao/models/paraphrase-multilingual-MiniLM-L12-v2/model.safetensors")) { throw "Modelo offline não encontrado" }
-          & $exe --worker $input $out --event-file $events
+          & $exe --worker $inputFile $out --event-file $events
           $workerExitCode = $LASTEXITCODE
           if ($null -ne $workerExitCode -and $workerExitCode -ne 0) { throw "Worker encerrou com código $workerExitCode" }
           if (!(Test-Path $events)) { throw "O worker não criou o arquivo de eventos" }
