@@ -69,7 +69,9 @@ jobs:
           if (!(Test-Path $exe)) { throw "Executável não encontrado: $exe" }
           if (!(Test-Path "dist/PMAC-Analise-Formacao/models/paraphrase-multilingual-MiniLM-L12-v2/model.safetensors")) { throw "Modelo offline não encontrado" }
           & $exe --worker $input $out --event-file $events
-          if ($LASTEXITCODE -ne 0) { throw "Worker do executável encerrou com código $LASTEXITCODE" }
+          $workerExitCode = $LASTEXITCODE
+          if ($null -ne $workerExitCode -and $workerExitCode -ne 0) { throw "Worker encerrou com código $workerExitCode" }
+          if (!(Test-Path $events)) { throw "O worker não criou o arquivo de eventos" }
           $eventText = Get-Content $events -Raw
           if ($eventText -notmatch '"event": "run_completed"') { throw "O executável não emitiu run_completed" }
           $expected = @("resultado_analise_pmac_completo.csv", "resultado_analise_pmac_aplicavel.csv", "auditoria_classificacao_unidades.csv")

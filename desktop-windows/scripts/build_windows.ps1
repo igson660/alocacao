@@ -31,7 +31,10 @@ $SmokeOut = Join-Path $env:TEMP "pmac-smoke-output"
 $SmokeEvents = Join-Path $env:TEMP "pmac-smoke-events.jsonl"
 if (Test-Path $SmokeOut) { Remove-Item $SmokeOut -Recurse -Force }
 & "$Out/PMAC-Analise-Formacao.exe" --worker "tests/fixtures/mini_pmac.csv" $SmokeOut --event-file $SmokeEvents
-if ($LASTEXITCODE -ne 0) { throw "O worker empacotado encerrou com código $LASTEXITCODE" }
+if ($null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "O worker empacotado encerrou com código $LASTEXITCODE" }
+if (!(Test-Path $SmokeEvents)) { throw "O worker empacotado não criou o arquivo de eventos." }
+$SmokeEventText = Get-Content $SmokeEvents -Raw
+if ($SmokeEventText -notmatch '"event": "run_completed"') { throw "O worker empacotado não concluiu a análise." }
 if (!(Test-Path (Join-Path $SmokeOut "resultado_analise_pmac_completo.csv"))) { throw "O executável empacotado não gerou os CSVs esperados." }
 
 $Release = Join-Path $Root "release"
