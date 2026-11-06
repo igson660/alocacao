@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QProcess, QTimer, QUrl, Qt, QSize
+from PySide6.QtCore import QProcess, QProcessEnvironment, QTimer, QUrl, Qt, QSize
 from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
 )
 
-from analysis_runtime import EXPECTED_OUTPUTS, application_root, run_worker_from_cli
+from analysis_runtime import EXPECTED_OUTPUTS, application_root, run_worker_from_cli, run_worker_from_config
 
 PALETTE = {
     "navy": "#143f79",
@@ -119,6 +119,7 @@ class MainWindow(QMainWindow):
         self.last_error = ""
         self.event_file: Path | None = None
         self.cancel_file: Path | None = None
+        self.worker_config_file: Path | None = None
         self.event_line_count = 0
         self.process = QProcess(self)
         self.process.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
@@ -417,8 +418,23 @@ class MainWindow(QMainWindow):
         assert self.output_dir is not None and self.input_path is not None
         self.event_file = self.output_dir / ".pmac_run_events.jsonl"
         self.cancel_file = self.output_dir / ".pmac_cancel_request"
+        self.worker_config_file = self.output_dir / ".pmac_worker_config.json"
         self.event_file.write_text("", encoding="utf-8")
         self.cancel_file.unlink(missing_ok=True)
+        self.worker_config_file.write_text(
+            json.dumps(
+                {
+                    "input_file": str(self.input_path),
+                    "output_dir": str(self.output_dir),
+                    "event_file": str(self.event_file),
+                    "cancel_file": str(self.cancel_file),
+                    "run_tfidf": self.tfidf_check.isChecked(),
+                    "run_embeddings": self.embedding_check.isChecked(),
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
         self.event_line_count = 0
         self.run_button.setEnabled(False)
         self.cancel_button.setEnabled(True)
@@ -429,14 +445,12 @@ class MainWindow(QMainWindow):
 
         executable = sys.executable
         if getattr(sys, "frozen", False):
-            args = ["--worker", str(self.input_path), str(self.output_dir)]
+            args = []
         else:
-            args = [str(Path(__file__).resolve()), "--worker", str(self.input_path), str(self.output_dir)]
-        args.extend(["--event-file", str(self.event_file), "--cancel-file", str(self.cancel_file)])
-        if not self.tfidf_check.isChecked():
-            args.append("--no-tfidf")
-        if not self.embedding_check.isChecked():
-            args.append("--no-embeddings")
+            args = [str(Path(__file__).resolve())]
+        process_environment = QProcessEnvironment.systemEnvironment()
+        process_environment.insert("PMAC_WORKER_CONFIG", str(self.worker_config_file))
+        self.process.setProcessEnvironment(process_environment)
         self.process.setWorkingDirectory(str(application_root()))
         self.process.setProgram(executable)
         self.process.setArguments(args)
@@ -706,6 +720,8 @@ class MainWindow(QMainWindow):
                 self.event_file.unlink(missing_ok=True)
             if self.cancel_file is not None:
                 self.cancel_file.unlink(missing_ok=True)
+            if self.worker_config_file is not None:
+                self.worker_config_file.unlink(missing_ok=True)
         self.run_button.setEnabled(True)
         self.cancel_button.setEnabled(False)
         self._refresh_model_badge()
@@ -728,6 +744,9 @@ class MainWindow(QMainWindow):
 
 
 def main() -> int:
+    worker_config = os.environ.pop("PMAC_WORKER_CONFIG", None)
+    if worker_config:
+        return run_worker_from_config(worker_config)
     if len(sys.argv) > 1 and sys.argv[1] == "--worker":
         return run_worker_from_cli(sys.argv)
     os.environ.setdefault("QT_ENABLE_HIGHDPI_SCALING", "1")

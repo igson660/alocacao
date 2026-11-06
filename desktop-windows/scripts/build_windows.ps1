@@ -29,9 +29,14 @@ Copy-Item "README.md" "$Out/LEIA-ME.txt" -Force
 
 $SmokeOut = Join-Path $env:TEMP "pmac-smoke-output"
 $SmokeEvents = Join-Path $env:TEMP "pmac-smoke-events.jsonl"
+$SmokeConfig = Join-Path $env:TEMP "pmac-smoke-config.json"
 if (Test-Path $SmokeOut) { Remove-Item $SmokeOut -Recurse -Force }
-& "$Out/PMAC-Analise-Formacao.exe" --worker "tests/fixtures/mini_pmac.csv" $SmokeOut --event-file $SmokeEvents
-if ($null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "O worker empacotado encerrou com código $LASTEXITCODE" }
+@{ input_file = "tests/fixtures/mini_pmac.csv"; output_dir = $SmokeOut; event_file = $SmokeEvents; run_tfidf = $true; run_embeddings = $true } | ConvertTo-Json -Compress | Set-Content -Encoding utf8 $SmokeConfig
+$env:PMAC_WORKER_CONFIG = $SmokeConfig
+$Worker = Start-Process -FilePath "$Out/PMAC-Analise-Formacao.exe" -WorkingDirectory $Root -Wait -PassThru
+$WorkerExitCode = $Worker.ExitCode
+Remove-Item Env:PMAC_WORKER_CONFIG
+if ($null -ne $WorkerExitCode -and $WorkerExitCode -ne 0) { throw "O worker empacotado encerrou com código $WorkerExitCode" }
 if (!(Test-Path $SmokeEvents)) { throw "O worker empacotado não criou o arquivo de eventos." }
 $SmokeEventText = Get-Content $SmokeEvents -Raw
 if ($SmokeEventText -notmatch '"event": "run_completed"') { throw "O worker empacotado não concluiu a análise." }

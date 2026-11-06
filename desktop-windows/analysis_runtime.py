@@ -434,3 +434,42 @@ def run_worker_from_cli(argv: list[str]) -> int:
     except Exception as exc:
         event_sink({"event": "worker_error", "message": str(exc), "traceback": traceback.format_exc()})
         return 1
+
+
+def run_worker_from_config(config_file: str | Path) -> int:
+    """Executa o mesmo fluxo worker usando um arquivo de configuração local.
+
+    Esse modo evita depender de argumentos de linha de comando ao iniciar o
+    binário GUI empacotado no Windows. O arquivo é apagado assim que lido.
+    """
+    config_path = Path(config_file)
+    config: dict[str, Any] = {}
+    event_sink: EventFileSink | None = None
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config_path.unlink(missing_ok=True)
+        event_path = config.get("event_file")
+        if event_path:
+            event_sink = EventFileSink(event_path)
+        if event_sink is None:
+            raise ValueError("A configuração do worker precisa informar event_file.")
+        run_notebook(
+            config["input_file"],
+            config["output_dir"],
+            run_tfidf=bool(config.get("run_tfidf", True)),
+            run_embeddings=bool(config.get("run_embeddings", True)),
+            event_callback=event_sink,
+            cancel_event=CancellationMarker(config.get("cancel_file")),
+        )
+        return 0
+    except RunCancelled:
+        return 130
+    except Exception as exc:
+        if event_sink is None and config.get("event_file"):
+            try:
+                event_sink = EventFileSink(config["event_file"])
+            except Exception:
+                event_sink = None
+        if event_sink is not None:
+            event_sink({"event": "worker_error", "message": str(exc), "traceback": traceback.format_exc()})
+        return 1
