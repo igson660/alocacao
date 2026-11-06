@@ -58,15 +58,22 @@ jobs:
       - name: Smoke test do executável (base sintética)
         run: |
           $exe = "dist/PMAC-Analise-Formacao/PMAC-Analise-Formacao.exe"
-          $input = "tests/fixtures/mini_pmac.csv"
+          $inputFile = "tests/fixtures/mini_pmac.csv"
           $out = Join-Path $env:RUNNER_TEMP "pmac-smoke-out"
           $events = Join-Path $env:RUNNER_TEMP "pmac-smoke-events.jsonl"
+          $config = Join-Path $env:RUNNER_TEMP "pmac-smoke-config.json"
           if (!(Test-Path $exe)) { throw "Executável não encontrado: $exe" }
           if (!(Test-Path "dist/PMAC-Analise-Formacao/models/paraphrase-multilingual-MiniLM-L12-v2/model.safetensors")) { throw "Modelo offline não encontrado" }
-          & $exe --worker $input $out --event-file $events
-          if ($LASTEXITCODE -ne 0) { throw "Worker encerrou com código $LASTEXITCODE" }
+          @{ input_file = $inputFile; output_dir = $out; event_file = $events; run_tfidf = $true; run_embeddings = $true } | ConvertTo-Json -Compress | Set-Content -Encoding utf8 $config
+          $env:PMAC_WORKER_CONFIG = $config
+          $worker = Start-Process -FilePath $exe -WorkingDirectory (Get-Location).Path -Wait -PassThru
+          $workerExitCode = $worker.ExitCode
+          Remove-Item Env:PMAC_WORKER_CONFIG
+          if ($null -ne $workerExitCode -and $workerExitCode -ne 0) { throw "Worker encerrou com código $workerExitCode" }
+          if (!(Test-Path $events)) { throw "O worker não criou o arquivo de eventos" }
           $eventText = Get-Content $events -Raw
-          if ($eventText -notmatch '"event": "run_completed"') { throw "O worker não emitiu run_completed" }
+          Write-Host $eventText
+          if ($eventText -notmatch '"event": "run_completed"') { throw "O worker não emitiu run_completed; veja eventos acima." }
           $expected = @("resultado_analise_pmac_completo.csv", "resultado_analise_pmac_aplicavel.csv", "auditoria_classificacao_unidades.csv")
           foreach ($name in $expected) { if (!(Test-Path (Join-Path $out $name))) { throw "Saída ausente: $name" } }
 
