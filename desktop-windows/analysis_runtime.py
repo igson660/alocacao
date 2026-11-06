@@ -392,6 +392,16 @@ class EventFileSink:
 def run_worker_from_cli(argv: list[str]) -> int:
     import argparse
 
+    event_path = None
+    for index, value in enumerate(argv[:-1]):
+        if value == "--event-file":
+            event_path = argv[index + 1]
+            break
+        if value.startswith("--event-file="):
+            event_path = value.split("=", 1)[1]
+            break
+    event_sink = EventFileSink(event_path) if event_path else None
+
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--worker", action="store_true")
     parser.add_argument("input_file")
@@ -403,9 +413,11 @@ def run_worker_from_cli(argv: list[str]) -> int:
     try:
         options = parser.parse_args(argv[1:])
     except SystemExit as exc:
+        if event_sink is not None:
+            event_sink({"event": "worker_error", "message": "Argumentos do worker inválidos; verifique o log de execução."})
         return int(exc.code or 0)
 
-    event_sink = EventFileSink(options.event_file)
+    event_sink = event_sink or EventFileSink(options.event_file)
 
     try:
         run_notebook(
